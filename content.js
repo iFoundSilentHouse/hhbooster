@@ -73,7 +73,7 @@ window.addEventListener('message', (event) => {
         console.log('[Main] Получен инкремент из чата:', count);
 
         // Используем общую функцию отправки
-        sendTrackingData('chat', count);
+    	sendTrackingData('chat', event.data.count);
     }
 });
 

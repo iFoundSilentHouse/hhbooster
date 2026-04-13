@@ -12,16 +12,18 @@ const ChatService = {
         });
 
         if (target) {
-            target.click();
-            this.clickCount++;
-            window.parent.postMessage({
-                type: 'CHAT_INCREMENT_EVENT',
-                count: 1 // Всегда шлем 1 при каждом клике
-            }, '*');
+    target.click();
+    this.clickCount++;
 
-            console.log(`[ChatService] Клик зафиксирован: ${this.clickCount}`);
-            return true;
-        }
+    // Сообщаем главному окну, что произошел клик (+1)
+    window.parent.postMessage({ 
+        type: 'CHAT_INCREMENT_EVENT', 
+        count: 1 
+    }, '*');
+
+    console.log(`[ChatService] Клик зафиксирован, сигнал отправлен родительскому окну`);
+    return true;
+}
         return false;
     }
 };
