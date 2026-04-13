@@ -14,5 +14,6 @@
 * Все ошибки отображаются в консоли - можете слать в Issues.
 
 Icon by: zerosonesfun
-Link to icon https://github.com/zerosonesfun/BittyKitty?tab=License-1-ov-file
+
+Link to icon: https://github.com/zerosonesfun/BittyKitty?tab=License-1-ov-file
 
