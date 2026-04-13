@@ -4,7 +4,13 @@
 function getEditorState() { return sessionStorage.getItem('isAboutEditorEnabled') === 'true'; }
 function setEditorState(isActive) { sessionStorage.setItem('isAboutEditorEnabled', isActive); }
 function getUpdateCount() { return parseInt(sessionStorage.getItem('aboutEditorUpdateCount') || '0', 10); }
-function incrementUpdateCount() { sessionStorage.setItem('aboutEditorUpdateCount', getUpdateCount() + 1); }
+function incrementUpdateCount() {
+    const newCount = getUpdateCount() + 1;
+    sessionStorage.setItem('aboutEditorUpdateCount', newCount);
+
+    // Отправляем именно единицу (инкремент), а не всю сумму из сессии
+    sendTrackingData('editor', 1);
+}
 function resetUpdateCount() { sessionStorage.setItem('aboutEditorUpdateCount', '0'); }
 
 // --- СОСТОЯНИЕ ЧАТА ---
@@ -53,12 +59,21 @@ let chatResolve = null; // Глобальный "замок" для ожидан
 
 // Универсальный слушатель сообщений
 window.addEventListener('message', (event) => {
-    // Если пришел ответ со статистикой и у нас есть кто-то, кто его ждет (chatResolve)
+    // Слушаем ответы для итоговой статистики (уже было)
     if (event.data && event.data.type === 'CHAT_STATS_RESPONSE') {
         if (chatResolve) {
-            chatResolve(event.data.count); // "Отпираем" замок и передаем число
+            chatResolve(event.data.count);
             chatResolve = null;
         }
+    }
+
+    // Слушаем "тики" из чата для отправки на сервер
+    if (event.data && event.data.type === 'CHAT_INCREMENT_EVENT') {
+        const count = event.data.count;
+        console.log('[Main] Получен инкремент из чата:', count);
+
+        // Используем общую функцию отправки
+        sendTrackingData('chat', count);
     }
 });
 
@@ -100,7 +115,7 @@ async function toggleChatAutoReply() {
 
         // 1. Сначала запрашиваем данные у фрейма и ждем их
         const finalCount = await getFinalStats();
-        
+
         // 2. Останавливаем воркер
         stopChatCycle();
 
@@ -111,16 +126,16 @@ async function toggleChatAutoReply() {
 
 function startChatCycle() {
     stopChatCycle();
-    
+
     const blob = new Blob([`setInterval(() => postMessage('tick'), 10000);`], { type: 'text/javascript' });
     window.chatWorker = new Worker(URL.createObjectURL(blob));
-    
+
     window.chatWorker.onmessage = (e) => {
         if (e.data === 'tick' && sessionStorage.getItem('isChatAutoReplyEnabled') === 'true') {
             sendTickToChatIframe();
         }
     };
-    
+
     // Сразу запускаем первый раз
     sendTickToChatIframe();
 }
@@ -167,7 +182,7 @@ function initUI() {
                 padding: 4px 10px; margin-right: 12px; cursor: pointer; font-size: 11px;
                 font-weight: bold; z-index: 9999;
             `;
-            
+
             const isActive = sessionStorage.getItem('isChatAutoReplyEnabled') === 'true';
             chatBtn.innerText = isActive ? '🛑 Стоп чат' : '🤖 Авто-чат';
             if (isActive) {
@@ -190,3 +205,23 @@ const observer = new MutationObserver(() => {
 // Запускаем сразу и начинаем слежку
 initUI();
 observer.observe(document.body, { childList: true, subtree: true });
+
+async function sendTrackingData(type, count) {
+    const url = 'http://localhost:3020/track'; // Ваш эндпоинт
+    const payload = {
+        type: type, // 'editor' или 'chat'
+        count: count,
+        timestamp: new Date().toISOString()
+    };
+
+    try {
+        await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        console.log(`[Tracker] Данные ${type} отправлены: ${count}`);
+    } catch (e) {
+        console.error('[Tracker] Ошибка отправки:', e);
+    }
+}
