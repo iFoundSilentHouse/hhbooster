@@ -14,10 +14,14 @@
     },
     "default_title": "HH Booster: Статус системы"
   },
+  "background": {
+    "service_worker": "background.js"
+  },
   "permissions": ["storage"],
   "host_permissions": [
     "https://*.hh.ru/*",
-    "https://chatik.hh.ru/*"
+    "https://chatik.hh.ru/*",
+    "http://localhost:3021/*"
   ],
   "content_scripts": [
     {

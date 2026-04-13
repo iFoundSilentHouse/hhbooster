@@ -42,7 +42,7 @@ function applyAboutButtonState(btn, isActive) {
 
 function startAboutEditorCycle() {
     stopAboutEditorCycle();
-    const blob = new Blob([`setInterval(() => postMessage('tick'), 10000);`], { type: 'text/javascript' });
+    const blob = new Blob([`setInterval(() => postMessage('tick'), 5000);`], { type: 'text/javascript' });
     window.aboutEditorWorker = new Worker(URL.createObjectURL(blob));
     window.aboutEditorWorker.onmessage = (e) => {
         if (e.data === 'tick' && getEditorState()) AboutEditorService.executeSequence();
@@ -206,22 +206,13 @@ const observer = new MutationObserver(() => {
 initUI();
 observer.observe(document.body, { childList: true, subtree: true });
 
-async function sendTrackingData(type, count) {
-    const url = 'http://localhost:3020/track'; // Ваш эндпоинт
-    const payload = {
-        type: type, // 'editor' или 'chat'
-        count: count,
-        timestamp: new Date().toISOString()
-    };
-
-    try {
-        await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        console.log(`[Tracker] Данные ${type} отправлены: ${count}`);
-    } catch (e) {
-        console.error('[Tracker] Ошибка отправки:', e);
-    }
+function sendTrackingData(type, count) {
+    // Отправляем сообщение во внутреннюю шину расширения
+    chrome.runtime.sendMessage({
+        action: 'TRACK_STATS',
+        data: { 
+            type: type, 
+            count: count 
+        }
+    });
 }

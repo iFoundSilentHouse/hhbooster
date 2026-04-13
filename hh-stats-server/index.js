@@ -3,7 +3,7 @@ const cors = require('cors');
 const Database = require('better-sqlite3');
 
 const app = express();
-const port = 3020;
+const port = 3021;
 
 const db = new Database('stats.db');
 
@@ -16,7 +16,25 @@ db.exec(`
   )
 `);
 
-app.use(cors());
+app.use(cors({
+    origin: '*', // В продакшене лучше указать конкретный домен
+    methods: ['POST', 'GET', 'OPTIONS'],
+    allowedHeaders: ['Content-Type']
+}));
+
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    
+    // Если это предварительный запрос от браузера
+    if (req.method === 'OPTIONS') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        return res.sendStatus(204); // Отвечаем "нет контента", всё ок
+    }
+    next();
+});
+
 app.use(express.json());
 
 app.post('/track', (req, res) => {
